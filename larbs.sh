@@ -76,7 +76,7 @@ adduserandpass() { \
 
 gitconfig () { \
 	gitmail=$(dialog --inputbox "First, please enter your git account mailbox." 10 60 3>&1 1>&2 2>&3 3>&1) || exit
-	while ! echo "$gitmail" | grep "^[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:].]{2,4}$ ]]" >/dev/null 2>&1; do
+	while ! echo "$gitmail" | grep "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])" >/dev/null 2>&1; do
 		gitmail=$(dialog --no-cancel --inputbox "Email address not valid. Give a valid email address." 10 60 3>&1 1>&2 2>&3 3>&1)
 	done
 	gituser=$(dialog --inputbox "First, please enter a name for the user account." 10 60 3>&1 1>&2 2>&3 3>&1) || exit
