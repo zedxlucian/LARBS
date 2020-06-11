@@ -76,7 +76,7 @@ adduserandpass() { \
 
 gitconfig () { \
 	gitmail=$(dialog --inputbox "First, please enter your git account mailbox." 10 60 3>&1 1>&2 2>&3 3>&1) || exit
-	while ! echo "$gitmail" | grep "\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}\b" >/dev/null 2>&1; do
+	while ! echo "$gitmail" | grep -E "\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}\b" >/dev/null 2>&1; do
 		gitmail=$(dialog --no-cancel --inputbox "Email address not valid. Give a valid email address." 10 60 3>&1 1>&2 2>&3 3>&1)
 	done
 	gituser=$(dialog --inputbox "First, please enter a name for the user account." 10 60 3>&1 1>&2 2>&3 3>&1) || exit
