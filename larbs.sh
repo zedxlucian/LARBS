@@ -18,7 +18,7 @@ esac done
 [ -z "$dotfilesrepo" ] && dotfilesrepo="https://github.com/zedxlucian/.dotfiles.git"
 [ -z "$progsfile" ] && progsfile="https://raw.githubusercontent.com/zedxlucian/LARBS/master/progs.csv"
 [ -z "$aurhelper" ] && aurhelper="yay"
-[ -z "$repobranch" ] && repobranch="master"
+[ -z "$repobranch" ] && repobranch="larbs"
 
 ### FUNCTIONS ###
 
@@ -132,19 +132,75 @@ installationloop() { \
 			"A") aurinstall "$program" "$comment" ;;
 			"G") gitmakeinstall "$program" "$comment" ;;
 			"P") pipinstall "$program" "$comment" ;;
-			*) maininstall "$program" "$comment" ;;
+			  *) maininstall "$program" "$comment" ;;
 		esac
 	done < /tmp/progs.csv ;}
 
-putgitrepo() { # Downloads a gitrepo $1 and places the files in $2 only overwriting conflicts
+stowinstall() { # Downloads a gitrepo $1 and places the files in $dir using stow
 	dialog --infobox "Downloading and installing config files..." 4 60
-	[ -z "$3" ] && branch="master" || branch="$repobranch"
-	dir=$(mktemp -d)
-	[ ! -d "$2" ] && mkdir -p "$2"
-	chown -R "$name":wheel "$dir" "$2"
+	[ -z "$2" ] && branch="master" || branch="$repobranch"
+	dir=$(echo "$dotfilesrepo" | cut -d. -f3 | sed "s/^/\/home\/$name\/./")
 	sudo -u "$name" git clone --recursive -b "$branch" --depth 1 "$1" "$dir" >/dev/null 2>&1
-	sudo -u "$name" cp -rfT "$dir" "$2"
-	}
+	cd "$dir" || exit
+	sudo -u "$name" stow -t ~ -d ./* >/dev/null 2>&1
+	chown -R "$name":wheel "$dir"
+    }
+
+suckgitinstall () {
+	dialog --infobox "Downloading and installing dwm, st & dmenu...." 7 50
+	suckgit="https://git.suckless.org"
+	dir="/home/$name/.local/src/"
+	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dwm" "$dir" >/dev/null 2>&1
+	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/st" "$dir" >/dev/null 2>&1
+	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dmenu" "$dir" >/dev/null 2>&1
+	cd "$dir/dwm" || exit
+	suckbranch >/dev/null 2>&1 && suckmerge >/dev/null 2>&1
+	cd "$dir/st" || exit
+	suckbranch >/dev/null 2>&1 && suckmerge >/dev/null 2>&1
+	cd "$dir/dmenu" || exit
+	suckbranch >/dev/null 2>&1 && suckmerge >/dev/null 2>&1
+    }
+
+suckbranch () {
+	dotfiles="/home/$name/.local/src/suckless"
+	project=$(basename "$(pwd)")
+	diffdir="${dotfiles}/${project}_diffs"
+	git checkout master &&
+	make clean && rm -f config.h && git reset --hard origin/master &&
+	for file in "$diffdir"/*.diff; do
+		git branch "$(echo "$file" | cut -d_ -f3 | cut -d. -f1)"
+	done
+    }
+
+suckmerge () {
+	suckdiff &&
+	git reset --hard origin/master &&
+	for branch in $(git for-each-ref --format='%(refname)' refs/heads/ | cut -d'/' -f3); do
+		if [ "$branch" != "master" ]; then
+			echo "$branch"
+			git merge "$branch" -m $branch
+		fi
+	done
+	make && sudo make clean install
+    }
+
+suckdiff () {
+	git checkout master &&
+	dotfiles="/home/$name/.local/src/suckless"
+	project=$(basename "$(pwd)")
+	diffdir="${dotfiles}/${project}_diffs/"
+	olddiffdir="${dotfiles}/${project}_diffs/old/"
+	rm -rf "$olddiffdir" &&
+	mkdir -p "$olddiffdir" &&
+	mkdir -p "$diffdir" &&
+	mv "$diffdir"*.diff "$olddiffdir" || true &&
+	make clean && rm -f config.h && git reset --hard origin/master &&
+	for branch in $(git for-each-ref --format='%(refname)' refs/heads/ | cut -d'/' -f3); do
+		if [ "$branch" != "master" ]; then
+			git diff master.."$branch" > "${diffdir}${project}_${branch}.diff"
+		fi
+	done
+   }
 
 systembeepoff() { dialog --infobox "Getting rid of that retarded error beep sound..." 10 50
 	rmmod pcspkr
@@ -186,6 +242,7 @@ installpkg curl
 installpkg base-devel
 installpkg git
 installpkg ntp
+installpkg stow
 
 dialog --title "LARBS Installation" --infobox "Synchronizing system time to ensure successful and secure installation of software..." 4 70
 ntpdate 0.us.pool.ntp.org >/dev/null 2>&1
@@ -213,11 +270,17 @@ ntpdate 0.us.pool.ntp.org >/dev/null 2>&1
 # and all build dependencies are installed.
 installationloop
 
+# Fix for 'dirmngr not found', this is needed to install 'libxft-bgra' package.
+dirmngr </dev/null >/dev/null 2&1
+
 dialog --title "LARBS Installation" --infobox "Finally, installing \`libxft-bgra\` to enable color emoji in suckless software without crashes." 5 70
 yes | sudo -u "$name" $aurhelper -S libxft-bgra >/dev/null 2>&1
 
 # Install the dotfiles in the user's home directory
-putgitrepo "$dotfilesrepo" "/home/$name" "$repobranch"
+stowinstall "$dotfilesrepo" "$repobranch"
+
+# Install DWM, ST & DMENU
+suckgitinstall
 
 # Most important command! Get rid of the beep!
 systembeepoff
