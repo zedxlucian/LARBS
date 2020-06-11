@@ -74,6 +74,19 @@ adduserandpass() { \
 	echo "$name:$pass1" | chpasswd
 	unset pass1 pass2 ;}
 
+gitconfig () { \
+	gitmail=$(dialog --inputbox "First, please enter your git account mailbox." 10 60 3>&1 1>&2 2>&3 3>&1) || exit
+	while ! echo "$gitmail" | grep "^[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:].]{2,4}$ ]]" >/dev/null 2>&1; do
+		gitmail=$(dialog --no-cancel --inputbox "Email address not valid. Give a valid email address." 10 60 3>&1 1>&2 2>&3 3>&1)
+	done
+	gituser=$(dialog --inputbox "First, please enter a name for the user account." 10 60 3>&1 1>&2 2>&3 3>&1) || exit
+	while ! echo "$gituser" | grep "^[a-z_][a-z0-9_-]*$" >/dev/null 2>&1; do
+		gituser=$(dialog --no-cancel --inputbox "Username not valid. Give a valid username." 10 60 3>&1 1>&2 2>&3 3>&1)
+	done
+	dialog --infobox "Setting up git..." 4 50
+	git config --global user.email "$gitmail"
+	git config --global user.name "$gituser" ;}
+
 refreshkeys() { \
 	dialog --infobox "Refreshing Arch Keyring..." 4 40
 	pacman --noconfirm -Sy archlinux-keyring >/dev/null 2>&1
@@ -142,7 +155,7 @@ stowinstall() { # Downloads a gitrepo $1 and places the files in $dir using stow
 	dir=$(echo "$dotfilesrepo" | cut -d. -f3 | sed "s/^/\/home\/$name\/./")
 	sudo -u "$name" git clone --recursive -b "$branch" --depth 1 "$1" "$dir" >/dev/null 2>&1
 	cd "$dir" || exit
-	sudo -u "$name" stow -t ~ -d ./* >/dev/null 2>&1
+	sudo -u "$name" stow -t "/home/$name/" config emacs home local >/dev/null 2>&1
 	chown -R "$name":wheel "$dir"
     }
 
@@ -154,11 +167,11 @@ suckgitinstall () {
 	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/st" "$dir" >/dev/null 2>&1
 	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dmenu" "$dir" >/dev/null 2>&1
 	cd "$dir/dwm" || exit
-	suckbranch >/dev/null 2>&1 && suckmerge >/dev/null 2>&1
+	suckbranch >/dev/null 2>&1 && suckdiffinstall && suckmerge >/dev/null 2>&1
 	cd "$dir/st" || exit
-	suckbranch >/dev/null 2>&1 && suckmerge >/dev/null 2>&1
+	suckbranch >/dev/null 2>&1 && suckdiffinstall && suckmerge >/dev/null 2>&1
 	cd "$dir/dmenu" || exit
-	suckbranch >/dev/null 2>&1 && suckmerge >/dev/null 2>&1
+	suckbranch >/dev/null 2>&1 && suckdiffinstall && suckmerge >/dev/null 2>&1
     }
 
 suckbranch () {
@@ -173,31 +186,28 @@ suckbranch () {
     }
 
 suckmerge () {
-	suckdiff &&
 	git reset --hard origin/master &&
 	for branch in $(git for-each-ref --format='%(refname)' refs/heads/ | cut -d'/' -f3); do
 		if [ "$branch" != "master" ]; then
 			echo "$branch"
-			git merge "$branch" -m $branch
+			git merge "$branch" -m "$branch"
 		fi
 	done
 	make && sudo make clean install
     }
 
-suckdiff () {
+suckdiffinstall () {
 	git checkout master &&
 	dotfiles="/home/$name/.local/src/suckless"
 	project=$(basename "$(pwd)")
 	diffdir="${dotfiles}/${project}_diffs/"
-	olddiffdir="${dotfiles}/${project}_diffs/old/"
-	rm -rf "$olddiffdir" &&
-	mkdir -p "$olddiffdir" &&
-	mkdir -p "$diffdir" &&
-	mv "$diffdir"*.diff "$olddiffdir" || true &&
 	make clean && rm -f config.h && git reset --hard origin/master &&
 	for branch in $(git for-each-ref --format='%(refname)' refs/heads/ | cut -d'/' -f3); do
-		if [ "$branch" != "master" ]; then
-			git diff master.."$branch" > "${diffdir}${project}_${branch}.diff"
+		if [ "$branch" != "master" ];then
+			git checkout "$branch" >/dev/null 2>&1
+			git apply "$diffdir/$branch.diff" >/dev/null 2&1 || exit
+			git add -A >/dev/null 2>&1
+			git commit -m "$branch" >/dev/null 2>&1
 		fi
 	done
    }
@@ -226,6 +236,9 @@ getuserandpass || error "User exited."
 
 # Give warning if user already exists.
 usercheck || error "User exited."
+
+# Setup git config
+gitconfig || error "User exited."
 
 # Last chance for user to back out before install.
 preinstallmsg || error "User exited."
@@ -274,7 +287,7 @@ installationloop
 dirmngr </dev/null >/dev/null 2&1
 
 dialog --title "LARBS Installation" --infobox "Finally, installing \`libxft-bgra\` to enable color emoji in suckless software without crashes." 5 70
-yes | sudo -u "$name" $aurhelper -S libxft-bgra >/dev/null 2>&1
+yes | sudo -u "$name" $aurhelper -S libxft-bgra --needed >/dev/null 2>&1
 
 # Install the dotfiles in the user's home directory
 stowinstall "$dotfilesrepo" "$repobranch"
@@ -286,7 +299,7 @@ suckgitinstall
 systembeepoff
 
 # Make zsh the default shell for the user.
-chsh -s /bin/zsh $name >/dev/null 2>&1
+chsh -s /bin/zsh "$name" >/dev/null 2>&1
 sudo -u "$name" mkdir -p "/home/$name/.cache/zsh/"
 echo "export ZDOTDIR=/home/$name/.config/zsh" > /etc/zsh/zshenv
 
