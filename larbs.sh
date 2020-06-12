@@ -76,7 +76,7 @@ adduserandpass() { \
 
 gitconfig () { \
 	gitmail=$(dialog --inputbox "First, please enter your git account mailbox." 10 60 3>&1 1>&2 2>&3 3>&1) || exit
-	while ! echo "$gitmail" | grep "\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}\b" >/dev/null 2>&1; do
+	while ! echo "$gitmail" | grep -E "\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}\b" >/dev/null 2>&1; do
 		gitmail=$(dialog --no-cancel --inputbox "Email address not valid. Give a valid email address." 10 60 3>&1 1>&2 2>&3 3>&1)
 	done
 	gituser=$(dialog --inputbox "First, please enter a name for the user account." 10 60 3>&1 1>&2 2>&3 3>&1) || exit
@@ -150,28 +150,29 @@ installationloop() { \
 	done < /tmp/progs.csv ;}
 
 stowinstall() { # Downloads a gitrepo $1 and places the files in $dir using stow
-	dialog --infobox "Downloading and installing config files..." 4 60
+	dialog --title "LARBS installation" --infobox "Downloading and installing config files..." 4 60
 	[ -z "$2" ] && branch="master" || branch="$repobranch"
 	dir=$(echo "$dotfilesrepo" | cut -d. -f3 | sed "s/^/\/home\/$name\/./")
 	sudo -u "$name" git clone --recursive -b "$branch" --depth 1 "$1" "$dir" >/dev/null 2>&1
+	sudo -u "$name" mkdir -p "/home/$name/.local/src" "/home/$name/.local/bin" "/home/$name/.local/share" "/home/$name/.local/share/xorg"
 	cd "$dir" || exit
-	sudo -u "$name" stow -t "/home/$name/" config emacs home local >/dev/null 2>&1
+	sudo -u "$name" stow -t "/home/$name/" config emacs home local || exit
 	chown -R "$name":wheel "$dir"
     }
 
 suckgitinstall () {
-	dialog --infobox "Downloading and installing dwm, st & dmenu...." 7 50
+	dialog --title "LARBS installation" --infobox "Downloading and installing dwm, st & dmenu...." 4 60
 	suckgit="https://git.suckless.org"
-	dir="/home/$name/.local/src/"
-	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dwm" "$dir" >/dev/null 2>&1
-	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/st" "$dir" >/dev/null 2>&1
-	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dmenu" "$dir" >/dev/null 2>&1
+	dir="/home/$name/.local/src"
+	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dwm" "$dir/dwm" >/dev/null 2>&1
+	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/st" "$dir/st" >/dev/null 2&>1
+	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dmenu" "$dir/dmenu" >/dev/null 2>&1
 	cd "$dir/dwm" || exit
-	suckbranch >/dev/null 2>&1 && suckdiffinstall && suckmerge >/dev/null 2>&1
+	suckbranch && suckdiffinstall && suckmerge
 	cd "$dir/st" || exit
-	suckbranch >/dev/null 2>&1 && suckdiffinstall && suckmerge >/dev/null 2>&1
+	suckbranch && suckdiffinstall && suckmerge
 	cd "$dir/dmenu" || exit
-	suckbranch >/dev/null 2>&1 && suckdiffinstall && suckmerge >/dev/null 2>&1
+	suckbranch && suckdiffinstall && suckmerge
     }
 
 suckbranch () {
@@ -181,31 +182,31 @@ suckbranch () {
 	git checkout master &&
 	make clean && rm -f config.h && git reset --hard origin/master &&
 	for file in "$diffdir"/*.diff; do
-		git branch "$(echo "$file" | cut -d_ -f3 | cut -d. -f1)"
+		git branch "$(basename "$file" | sed 's/\(.*\)\..*/\1/')" >/dev/null 2>&1
 	done
     }
 
 suckmerge () {
-	git reset --hard origin/master &&
+	git checkout master >/dev/null 2>&1 &&
+	git reset --hard origin/master >/dev/null 2>&1 &&
 	for branch in $(git for-each-ref --format='%(refname)' refs/heads/ | cut -d'/' -f3); do
 		if [ "$branch" != "master" ]; then
-			echo "$branch"
-			git merge "$branch" -m "$branch"
+			git merge "$branch" -m "$branch" >/dev/null 2>&1
 		fi
 	done
-	make && sudo make clean install
+	make >/dev/null 2>&1 && sudo make clean install >/dev/null 2>&1
     }
 
 suckdiffinstall () {
-	git checkout master &&
+	git checkout master >/dev/null 2>&1 &&
 	dotfiles="/home/$name/.local/src/suckless"
 	project=$(basename "$(pwd)")
-	diffdir="${dotfiles}/${project}_diffs/"
-	make clean && rm -f config.h && git reset --hard origin/master &&
+	diffdir="${dotfiles}/${project}_diffs"
+	make clean >/dev/null 2>&1 && rm -f config.h && git reset --hard origin/master >/dev/null 2>&1 &&
 	for branch in $(git for-each-ref --format='%(refname)' refs/heads/ | cut -d'/' -f3); do
 		if [ "$branch" != "master" ];then
 			git checkout "$branch" >/dev/null 2>&1
-			git apply "$diffdir/$branch.diff" >/dev/null 2&1 || exit
+			git apply "$diffdir/$branch.diff" >/dev/null 2>&1
 			git add -A >/dev/null 2>&1
 			git commit -m "$branch" >/dev/null 2>&1
 		fi
@@ -284,16 +285,13 @@ ntpdate 0.us.pool.ntp.org >/dev/null 2>&1
 installationloop
 
 # Fix for 'dirmngr not found', this is needed to install 'libxft-bgra' package.
-dirmngr </dev/null >/dev/null 2&1
+dirmngr </dev/null >/dev/null 2>&1
 
 dialog --title "LARBS Installation" --infobox "Finally, installing \`libxft-bgra\` to enable color emoji in suckless software without crashes." 5 70
 yes | sudo -u "$name" $aurhelper -S libxft-bgra --needed >/dev/null 2>&1
 
 # Install the dotfiles in the user's home directory
 stowinstall "$dotfilesrepo" "$repobranch"
-
-# Install DWM, ST & DMENU
-suckgitinstall
 
 # Most important command! Get rid of the beep!
 systembeepoff
@@ -316,6 +314,9 @@ killall pulseaudio; sudo -u "$name" pulseaudio --start
 # serveral important commands, `shutdown`, `reboot`, updating, etc. without a password.
 [ "$distro" = arch ] && newperms "%wheel ALL=(ALL) ALL #LARBS
 %wheel ALL=(ALL) NOPASSWD: /usr/bin/shutdown,/usr/bin/reboot,/usr/bin/systemctl suspend,/usr/bin/wifi-menu,/usr/bin/mount,/usr/bin/umount,/usr/bin/pacman -Syu,/usr/bin/pacman -Syyu,/usr/bin/packer -Syu,/usr/bin/packer -Syyu,/usr/bin/systemctl restart NetworkManager,/usr/bin/rc-service NetworkManager restart,/usr/bin/pacman -Syyu --noconfirm,/usr/bin/loadkeys,/usr/bin/yay,/usr/bin/pacman -Syyuw --noconfirm"
+
+# Install DWM, ST & DMENU
+suckgitinstall
 
 # Last message! Install complete!
 finalize
