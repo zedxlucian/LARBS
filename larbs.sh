@@ -154,10 +154,10 @@ stowinstall() { # Downloads a gitrepo $1 and places the files in $dir using stow
 	[ -z "$2" ] && branch="master" || branch="$repobranch"
 	dir=$(echo "$dotfilesrepo" | cut -d. -f3 | sed "s/^/\/home\/$name\/./")
 	sudo -u "$name" git clone --recursive -b "$branch" --depth 1 "$1" "$dir" >/dev/null 2>&1
-	sudo -u "$name" mkdir -p "/home/$name/.local/src" "/home/$name/.local/bin" "/home/$name/.local/share" "/home/$name/.local/share/xorg"
-	cd "$dir" || exit
-	sudo -u "$name" stow -t "/home/$name/" config emacs home local || exit
-	chown -R "$name":wheel "$dir"
+	sudo -u "$name" mkdir -p "/home/$name/.local/src" "/home/$name/.local/bin" "/home/$name/.local/share" "/home/$name/.local/share/xorg" >/dev/null 2>&1
+	cd "$dir" >/dev/null 2>&1 || exit
+	sudo -u "$name" stow -t "/home/$name/" config emacs home local >/dev/null 2>&1 || exit
+	chown -R "$name":wheel "$dir" >/dev/null 2>&1
     }
 
 suckgitinstall () {
@@ -167,20 +167,23 @@ suckgitinstall () {
 	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dwm" "$dir/dwm" >/dev/null 2>&1
 	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/st" "$dir/st" >/dev/null 2&>1
 	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dmenu" "$dir/dmenu" >/dev/null 2>&1
-	cd "$dir/dwm" || exit
-	suckbranch && suckdiffinstall && suckmerge
-	cd "$dir/st" || exit
-	suckbranch && suckdiffinstall && suckmerge
-	cd "$dir/dmenu" || exit
-	suckbranch && suckdiffinstall && suckmerge
+	cd "$dir/dwm" >/dev/null 2>&1 && 
+	suckbranch >/dev/null 2>&1 && suckdiffinstall >/dev/null 2>&1 && suckmerge >/dev/null 2>&1 ||
+	dwmerr=$(echo "Unable to download dwm source code from "$suckgit", please download it manually and run 'suckbranch', 'suckdiffinstall' and 'suckmerge' scripts which are located in '/home/$name/.local/bin/'")
+	cd "$dir/st" >/dev/null 2>&1 && 
+	suckbranch >/dev/null 2>&1 && suckdiffinstall >/dev/null 2>&1 && suckmerge >/dev/null 2>&1 ||
+	sterr=$(echo "Unable to download st source code from "$suckgit", please download it manually and run 'suckbranch', 'suckdiffinstall' and 'suckmerge' scripts which are located in '/home/$name/.local/bin/'")
+	cd "$dir/dmenu" >/dev/null 2>&1 &&
+	suckbranch >/dev/null 2>&1 && suckdiffinstall >/dev/null 2>&1 && suckmerge >/dev/null 2>&1 ||
+	dmenuerr=$(echo "Unable to download dmenu source code from "$suckgit", please download it manually and run 'suckbranch', 'suckdiffinstall' and 'suckmerge' scripts which are located in '/home/$name/.local/bin/'")
     }
 
 suckbranch () {
 	dotfiles="/home/$name/.local/src/suckless"
 	project=$(basename "$(pwd)")
 	diffdir="${dotfiles}/${project}_diffs"
-	git checkout master &&
-	make clean && rm -f config.h && git reset --hard origin/master &&
+	git checkout master >/dev/null 2>&1 &&
+	make clean >/dev/null 2>&1 && rm -f config.h >/dev/null 2>&1 && git reset --hard origin/master >/dev/null 2>&1 &&
 	for file in "$diffdir"/*.diff; do
 		git branch "$(basename "$file" | sed 's/\(.*\)\..*/\1/')" >/dev/null 2>&1
 	done
@@ -202,7 +205,7 @@ suckdiffinstall () {
 	dotfiles="/home/$name/.local/src/suckless"
 	project=$(basename "$(pwd)")
 	diffdir="${dotfiles}/${project}_diffs"
-	make clean >/dev/null 2>&1 && rm -f config.h && git reset --hard origin/master >/dev/null 2>&1 &&
+	make clean >/dev/null 2>&1 && rm -f config.h >/dev/null 2>&1 && git reset --hard origin/master >/dev/null 2>&1 &&
 	for branch in $(git for-each-ref --format='%(refname)' refs/heads/ | cut -d'/' -f3); do
 		if [ "$branch" != "master" ];then
 			git checkout "$branch" >/dev/null 2>&1
@@ -219,7 +222,7 @@ systembeepoff() { dialog --infobox "Getting rid of that retarded error beep soun
 
 finalize(){ \
 	dialog --infobox "Preparing welcome message..." 4 50
-	dialog --title "All done!" --msgbox "Congrats! Provided there were no hidden errors, the script completed successfully and all the programs and configuration files should be in place.\\n\\nTo run the new graphical environment, log out and log back in as your new user, then run the command \"startx\" to start the graphical environment (it will start automatically in tty1).\\n\\n.t Luke" 12 80
+	dialog --title "All done!" --msgbox "Error detected:\\n$dwmerr\\n$sterr\\n$dmenuerr\\nAfter that, you can run the new graphical environment, log out and log back in as your new user, then run the command \"startx\" to start the graphical environment (it will start automatically in tty1).\\n\\nLydien" 15 90
 	}
 
 ### THE ACTUAL SCRIPT ###
