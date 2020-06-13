@@ -165,7 +165,7 @@ suckgitinstall () {
 	suckgit="https://git.suckless.org"
 	dir="/home/$name/.local/src"
 	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dwm" "$dir/dwm" >/dev/null 2>&1
-	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/st" "$dir/st" >/dev/null 2>&>1
+	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/st" "$dir/st" >/dev/null 2>&1
 	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dmenu" "$dir/dmenu" >/dev/null 2>&1
 	cd "$dir/dwm" >/dev/null 2>&1 && 
 	suckbranch >/dev/null 2>&1 && suckdiffinstall >/dev/null 2>&1 && suckmerge >/dev/null 2>&1 ||
