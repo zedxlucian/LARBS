@@ -154,7 +154,7 @@ stowinstall() { # Downloads a gitrepo $1 and places the files in $dir using stow
 	[ -z "$2" ] && branch="master" || branch="$repobranch"
 	dir=$(echo "$dotfilesrepo" | cut -d. -f3 | sed "s/^/\/home\/$name\/./")
 	sudo -u "$name" git clone --recursive -b "$branch" --depth 1 "$1" "$dir" >/dev/null 2>&1
-	sudo -u "$name" mkdir -p "/home/$name/.local/src" "/home/$name/.local/bin" "/home/$name/.local/share" "/home/$name/.local/share/xorg" >/dev/null 2>&1
+	sudo -u "$name" mkdir -p "/home/$name/.local/src" "/home/$name/.local/bin" "/home/$name/.local/share" "/home/$name/.local/share/xorg" "/home/$name/.local/bin/statusbar" "/home/$name/.local/bin/newsboat" "/home/$name/.local/bin/bspwm&" >/dev/null 2>&1
 	cd "$dir" >/dev/null 2>&1 || exit
 	sudo -u "$name" stow -t "/home/$name/" config emacs home local >/dev/null 2>&1 || exit
 	chown -R "$name":wheel "$dir" >/dev/null 2>&1
