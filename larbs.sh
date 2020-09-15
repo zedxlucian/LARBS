@@ -15,10 +15,10 @@ while getopts ":a:r:b:p:h" o; do case "${o}" in
 	*) printf "Invalid option: -%s\\n" "$OPTARG" && exit ;;
 esac done
 
-[ -z "$dotfilesrepo" ] && dotfilesrepo="https://github.com/zedxlucian/.dotfiles.git"
+[ -z "$dotfilesrepo" ] && dotfilesrepo="https://github.com/zedxlucian/dotfiles.git"
 [ -z "$progsfile" ] && progsfile="https://raw.githubusercontent.com/zedxlucian/LARBS/master/progs.csv"
 [ -z "$aurhelper" ] && aurhelper="yay"
-[ -z "$repobranch" ] && repobranch="larbs"
+[ -z "$repobranch" ] && repobranch="master"
 
 ### FUNCTIONS ###
 
@@ -154,67 +154,11 @@ stowinstall() { # Downloads a gitrepo $1 and places the files in $dir using stow
 	[ -z "$2" ] && branch="master" || branch="$repobranch"
 	dir=$(echo "$dotfilesrepo" | cut -d. -f3 | sed "s/^/\/home\/$name\/./")
 	sudo -u "$name" git clone --recursive -b "$branch" --depth 1 "$1" "$dir" >/dev/null 2>&1
-	sudo -u "$name" mkdir -p "/home/$name/.local/src" "/home/$name/.local/bin" "/home/$name/.local/share" "/home/$name/.local/share/xorg" "/home/$name/.local/bin/statusbar" "/home/$name/.local/bin/newsboat" "/home/$name/.local/bin/bspwm" >/dev/null 2>&1
+	sudo -u "$name" mkdir -p "/home/$name/.local/src" "/home/$name/.local/bin" "/home/$name/.local/share" "/home/$name/.local/share/xorg" "/home/$name/.local/bin/statusbar" "/home/$name/.local/bin/newsboat" " >/dev/null 2>&1
 	cd "$dir" >/dev/null 2>&1 || exit
-	sudo -u "$name" stow -t "/home/$name/" config home local >/dev/null 2>&1 || exit
+	sudo -u "$name" stow -t "/home/$name/" config home local vim >/dev/null 2>&1 || exit
 	chown -R "$name":wheel "$dir" >/dev/null 2>&1
     }
-
-suckgitinstall () {
-	dialog --title "LARBS installation" --infobox "Downloading and installing dwm, st & dmenu...." 4 60
-	suckgit="https://git.suckless.org"
-	dir="/home/$name/.local/src"
-	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dwm" "$dir/dwm" >/dev/null 2>&1
-	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/st" "$dir/st" >/dev/null 2>&1
-	sudo -u "$name" git clone --recursive --depth 1 "$suckgit/dmenu" "$dir/dmenu" >/dev/null 2>&1
-	cd "$dir/dwm" >/dev/null 2>&1 && 
-	suckbranch >/dev/null 2>&1 && suckdiffinstall >/dev/null 2>&1 && suckmerge >/dev/null 2>&1 ||
-	dwmerr=$(echo "Unable to download dwm source code from "$suckgit", please download it manually and run 'suckbranch', 'suckdiffinstall' and 'suckmerge' scripts which are located in '/home/$name/.local/bin/'")
-	cd "$dir/st" >/dev/null 2>&1 && 
-	suckbranch >/dev/null 2>&1 && suckdiffinstall >/dev/null 2>&1 && suckmerge >/dev/null 2>&1 ||
-	sterr=$(echo "Unable to download st source code from "$suckgit", please download it manually and run 'suckbranch', 'suckdiffinstall' and 'suckmerge' scripts which are located in '/home/$name/.local/bin/'")
-	cd "$dir/dmenu" >/dev/null 2>&1 &&
-	suckbranch >/dev/null 2>&1 && suckdiffinstall >/dev/null 2>&1 && suckmerge >/dev/null 2>&1 ||
-	dmenuerr=$(echo "Unable to download dmenu source code from "$suckgit", please download it manually and run 'suckbranch', 'suckdiffinstall' and 'suckmerge' scripts which are located in '/home/$name/.local/bin/'")
-    }
-
-suckbranch () {
-	dotfiles="/home/$name/.local/src/suckless"
-	project=$(basename "$(pwd)")
-	diffdir="${dotfiles}/${project}_diffs"
-	git checkout master >/dev/null 2>&1 &&
-	make clean >/dev/null 2>&1 && rm -f config.h >/dev/null 2>&1 && git reset --hard origin/master >/dev/null 2>&1 &&
-	for file in "$diffdir"/*.diff; do
-		git branch "$(basename "$file" | sed 's/\(.*\)\..*/\1/')" >/dev/null 2>&1
-	done
-    }
-
-suckmerge () {
-	git checkout master >/dev/null 2>&1 &&
-	git reset --hard origin/master >/dev/null 2>&1 &&
-	for branch in $(git for-each-ref --format='%(refname)' refs/heads/ | cut -d'/' -f3); do
-		if [ "$branch" != "master" ]; then
-			git merge "$branch" -m "$branch" >/dev/null 2>&1
-		fi
-	done
-	make >/dev/null 2>&1 && sudo make clean install >/dev/null 2>&1
-    }
-
-suckdiffinstall () {
-	git checkout master >/dev/null 2>&1 &&
-	dotfiles="/home/$name/.local/src/suckless"
-	project=$(basename "$(pwd)")
-	diffdir="${dotfiles}/${project}_diffs"
-	make clean >/dev/null 2>&1 && rm -f config.h >/dev/null 2>&1 && git reset --hard origin/master >/dev/null 2>&1 &&
-	for branch in $(git for-each-ref --format='%(refname)' refs/heads/ | cut -d'/' -f3); do
-		if [ "$branch" != "master" ];then
-			git checkout "$branch" >/dev/null 2>&1
-			git apply "$diffdir/$branch.diff" >/dev/null 2>&1
-			git add -A >/dev/null 2>&1
-			git commit -m "$branch" >/dev/null 2>&1
-		fi
-	done
-   }
 
 systembeepoff() { dialog --infobox "Getting rid of that retarded error beep sound..." 10 50
 	rmmod pcspkr
@@ -222,7 +166,7 @@ systembeepoff() { dialog --infobox "Getting rid of that retarded error beep soun
 
 finalize(){ \
 	dialog --infobox "Preparing welcome message..." 4 50
-	dialog --title "All done!" --msgbox "Error detected:\\n$dwmerr\\n$sterr\\n$dmenuerr\\nAfter that, you can run the new graphical environment, log out and log back in as your new user, then run the command \"startx\" to start the graphical environment (it will start automatically in tty1).\\n\\nLydien" 15 90
+	dialog --title "All done!" --msgbox "Log out and log back in as your new user, the graphical environment will start automatically in tty1.\\n\\nLydien" 15 90
 	}
 
 ### THE ACTUAL SCRIPT ###
@@ -316,10 +260,7 @@ killall pulseaudio; sudo -u "$name" pulseaudio --start
 # This line, overwriting the `newperms` command above will allow the user to run
 # serveral important commands, `shutdown`, `reboot`, updating, etc. without a password.
 [ "$distro" = arch ] && newperms "%wheel ALL=(ALL) ALL #LARBS
-%wheel ALL=(ALL) NOPASSWD: /usr/bin/shutdown,/usr/bin/reboot,/usr/bin/systemctl suspend,/usr/bin/wifi-menu,/usr/bin/mount,/usr/bin/umount,/usr/bin/pacman -Syu,/usr/bin/pacman -Syyu,/usr/bin/packer -Syu,/usr/bin/packer -Syyu,/usr/bin/systemctl restart NetworkManager,/usr/bin/rc-service NetworkManager restart,/usr/bin/pacman -Syyu --noconfirm,/usr/bin/loadkeys,/usr/bin/yay,/usr/bin/pacman -Syyuw --noconfirm"
-
-# Install DWM, ST & DMENU
-suckgitinstall
+%wheel ALL=(ALL) NOPASSWD: /usr/bin/shutdown,/usr/bin/reboot,/usr/bin/systemctl suspend,/usr/bin/wifi-menu,/usr/bin/mount,/usr/bin/umount,/usr/bin/pacman -Syu,/usr/bin/pacman -Syyu,/usr/bin/packer -Syu,/usr/bin/packer -Syyu,/usr/bin/systemctl restart NetworkManager,/usr/bin/rc-service NetworkManager restart,/usr/bin/pacman -Syyu --noconfirm,/usr/bin/loadkeys,/usr/bin/yay,/usr/bin/pacman -Syyuw --noconfirm,usr/bin/killall"
 
 # Last message! Install complete!
 finalize
