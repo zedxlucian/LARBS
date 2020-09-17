@@ -152,9 +152,9 @@ installationloop() { \
 stowinstall() { 
 	dialog --title "LARBS installation" --infobox "Downloading and installing config files..." 4 60
 	[ -z "$2" ] && branch="master" || branch="$repobranch"
-	dir=$(echo "$dotfilesrepo" | cut -d. -f3 | sed "s/^/\/home\/$name\/./")
+	dir=$(echo "$dotfilesrepo" | cut -d. -f2 | sed "s/.*\//\/home\/$name\//")
 	sudo -u "$name" git clone --recursive -b "$branch" --depth 1 "$1" "$dir" >/dev/null 2>&1
-	sudo -u "$name" mkdir -p "/home/$name/.local/src" "/home/$name/.local/bin" "/home/$name/.local/share" "/home/$name/.local/share/xorg" "/home/$name/.local/bin/statusbar" "/home/$name/.local/bin/newsboat" >/dev/null 2>&1
+	sudo -u "$name" mkdir -p "/home/$name"/.local/{src,bin,share} "/home/$name"/.local/share/xorg "/home/$name"/.local/bin/{statusbar,newsboat} >/dev/null 2>&1
 	cd "$dir" >/dev/null 2>&1 || exit
 	sudo -u "$name" stow -t "/home/$name/" config home local vim >/dev/null 2>&1 || exit
 	chown -R "$name":wheel "$dir" >/dev/null 2>&1
