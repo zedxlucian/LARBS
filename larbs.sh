@@ -70,7 +70,7 @@ adduserandpass() { \
 	dialog --infobox "Adding user \"$name\"..." 4 50
 	useradd -m -g wheel -s /bin/bash "$name" >/dev/null 2>&1 ||
 	usermod -a -G wheel "$name" && mkdir -p /home/"$name" && chown "$name":wheel /home/"$name"
-	repodir="/home/$name/.local/src"; mkdir -p "$repodir"; chown -R "$name":wheel $(dirname "$repodir")
+	repodir="/home/$name/.local/src"; mkdir -p "$repodir"; chown -R "$name":wheel "$(dirname "$repodir")"
 	echo "$name:$pass1" | chpasswd
 	unset pass1 pass2 ;}
 
@@ -149,12 +149,12 @@ installationloop() { \
 		esac
 	done < /tmp/progs.csv ;}
 
-stowinstall() { # Downloads a gitrepo $1 and places the files in $dir using stow
+stowinstall() { 
 	dialog --title "LARBS installation" --infobox "Downloading and installing config files..." 4 60
 	[ -z "$2" ] && branch="master" || branch="$repobranch"
 	dir=$(echo "$dotfilesrepo" | cut -d. -f3 | sed "s/^/\/home\/$name\/./")
 	sudo -u "$name" git clone --recursive -b "$branch" --depth 1 "$1" "$dir" >/dev/null 2>&1
-	sudo -u "$name" mkdir -p "/home/$name/.local/src" "/home/$name/.local/bin" "/home/$name/.local/share" "/home/$name/.local/share/xorg" "/home/$name/.local/bin/statusbar" "/home/$name/.local/bin/newsboat" " >/dev/null 2>&1
+	sudo -u "$name" mkdir -p "/home/$name/.local/src" "/home/$name/.local/bin" "/home/$name/.local/share" "/home/$name/.local/share/xorg" "/home/$name/.local/bin/statusbar" "/home/$name/.local/bin/newsboat" >/dev/null 2>&1
 	cd "$dir" >/dev/null 2>&1 || exit
 	sudo -u "$name" stow -t "/home/$name/" config home local vim >/dev/null 2>&1 || exit
 	chown -R "$name":wheel "$dir" >/dev/null 2>&1
@@ -232,7 +232,7 @@ ntpdate 0.us.pool.ntp.org >/dev/null 2>&1
 installationloop
 
 # # Fix for 'dirmngr not found', this is needed to install 'libxft-bgra' package.
-dirmngr & >/dev/null 2>&1
+dirmngr >/dev/null 2>&1
 
 dialog --title "LARBS Installation" --infobox "Finally, installing \`libxft-bgra\` to enable color emoji in suckless software without crashes." 5 70
 gpg --keyserver pgp.mit.edu --recv-keys 4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E
