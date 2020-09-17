@@ -232,7 +232,7 @@ ntpdate 0.us.pool.ntp.org >/dev/null 2>&1
 installationloop
 
 # # Fix for 'dirmngr not found', this is needed to install 'libxft-bgra' package.
-dirmngr >/dev/null 2>&1
+dirmngr & >/dev/null 2>&1
 
 dialog --title "LARBS Installation" --infobox "Finally, installing \`libxft-bgra\` to enable color emoji in suckless software without crashes." 5 70
 gpg --keyserver pgp.mit.edu --recv-keys 4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E
