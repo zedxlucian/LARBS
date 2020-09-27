@@ -80,7 +80,7 @@ gitconfig () { \
 		gitmail=$(dialog --no-cancel --inputbox "Email address not valid. Give a valid email address." 10 60 3>&1 1>&2 2>&3 3>&1)
 	done
 	gituser=$(dialog --inputbox "First, please enter a name for the user account." 10 60 3>&1 1>&2 2>&3 3>&1) || exit
-	while ! echo "$gituser" | grep "^[a-z_][a-z0-9_-]*$" >/dev/null 2>&1; do
+	while ! echo "$gituser" | grep -E "^([A-Za-z]+[,.]?[ ]?|[A-Za-z]+['-]?)+$" >/dev/null 2>&1; do
 		gituser=$(dialog --no-cancel --inputbox "Username not valid. Give a valid username." 10 60 3>&1 1>&2 2>&3 3>&1)
 	done
 	dialog --infobox "Setting up git..." 4 50
@@ -166,7 +166,7 @@ systembeepoff() { dialog --infobox "Getting rid of that retarded error beep soun
 
 finalize(){ \
 	dialog --infobox "Preparing welcome message..." 4 50
-	dialog --title "All done!" --msgbox "Log out and log back in as your new user, the graphical environment will start automatically in tty1.\\n\\nLydien" 5 70
+	dialog --title "All done!" --msgbox "Log out and log back in as your new user, the graphical environment will start automatically in tty1.\\n\\nLydien" 8 70
 	}
 
 ### THE ACTUAL SCRIPT ###
