@@ -85,7 +85,7 @@ gitconfig () { \
 	done
 	dialog --infobox "Setting up git..." 4 50
 	git config --global user.email "$gitmail"
-	git config --global user.name "$gituser" ;}
+	git config --global user.name "'$gituser'" ;}
 
 refreshkeys() { \
 	dialog --infobox "Refreshing Arch Keyring..." 4 40
