@@ -22,17 +22,7 @@ esac done
 
 ### FUNCTIONS ###
 
-if type xbps-install >/dev/null 2>&1; then
-	installpkg(){ xbps-install -y "$1" >/dev/null 2>&1 ;}
-	grepseq="\"^[PGV]*,\""
-elif type apt >/dev/null 2>&1; then
-	installpkg(){ apt-get install -y "$1" >/dev/null 2>&1 ;}
-	grepseq="\"^[PGU]*,\""
-else
-	distro="arch"
-	installpkg(){ pacman --noconfirm --needed -S "$1" >/dev/null 2>&1 ;}
-	grepseq="\"^[PGA]*,\""
-fi
+installpkg() { pacman --noconfirm --needed -S "$1" >/dev/null 2>&1 ;}
 
 error() { clear; printf "ERROR:\\n%s\\n" "$1"; exit;}
 
@@ -144,6 +134,7 @@ installationloop() { \
 		case "$tag" in
 			"A") aurinstall "$program" "$comment" ;;
 			"G") gitmakeinstall "$program" "$comment" ;;
+			"S") sucklessinstall "$program" "$comment" ;;
 			"P") pipinstall "$program" "$comment" ;;
 			  *) maininstall "$program" "$comment" ;;
 		esac
@@ -154,11 +145,20 @@ stowinstall() {
 	[ -z "$2" ] && branch="master" || branch="$repobranch"
 	dir=$(echo "$dotfilesrepo" | cut -d. -f2 | sed "s/.*\//\/home\/$name\//")
 	sudo -u "$name" git clone --recursive -b "$branch" --depth 1 "$1" "$dir" >/dev/null 2>&1
-	sudo -u "$name" mkdir -p "/home/$name"/.local/{src,bin,share} "/home/$name"/.local/share/xorg "/home/$name"/.local/bin/{statusbar,newsboat} >/dev/null 2>&1
+	sudo -u "$name" mkdir -p "/home/$name"/{.config,.local/{src,bin/{statusbar,newsboat},share/xorg}} >/dev/null 2>&1
 	cd "$dir" >/dev/null 2>&1 || exit
-	sudo -u "$name" stow -t "/home/$name/" config home local vim >/dev/null 2>&1 || exit
-	chown -R "$name":wheel "$dir" >/dev/null 2>&1
-    }
+	sudo -u "$name" stow -t "/home/$name/" config home local >/dev/null 2>&1 || exit
+	chown -R "$name":wheel "$dir" >/dev/null 2>&1 ;}
+
+sucklessinstall(){
+	progname="$(basename "$1" .git)"
+	dir="$repodir/$progname"
+	dialog --title "LARBS Installation" --infobox "Installing suckless's \`$progname\` ($n of $total) via \`git\` and \`make\`. $(basename "$1") $2" 5 70
+	sudo -u "$name" git clone "$1" "$dir" >/dev/null 2>&1 || { cd "$dir" || return ; sudo -u "$name" git pull --force origin master;}
+	cd "$dir" || exit
+	make >/dev/null 2>&1
+	make install >/dev/null 2>&1
+	cd /tmp || return ;}
 
 systembeepoff() { dialog --infobox "Getting rid of that retarded error beep sound..." 10 50
 	rmmod pcspkr
@@ -208,22 +208,20 @@ installpkg stow
 dialog --title "LARBS Installation" --infobox "Synchronizing system time to ensure successful and secure installation of software..." 4 70
 ntpdate 0.us.pool.ntp.org >/dev/null 2>&1
 
-[ "$distro" = arch ] && { \
-	[ -f /etc/sudoers.pacnew ] && cp /etc/sudoers.pacnew /etc/sudoers # Just in case
+[ -f /etc/sudoers.pacnew ] && cp /etc/sudoers.pacnew /etc/sudoers # Just in case
 
-	# Allow user to run sudo without password. Since AUR programs must be installed
-	# in a fakeroot environment, this is required for all builds with AUR.
-	newperms "%wheel ALL=(ALL) NOPASSWD: ALL"
+# Allow user to run sudo without password. Since AUR programs must be installed
+# in a fakeroot environment, this is required for all builds with AUR.
+newperms "%wheel ALL=(ALL) NOPASSWD: ALL"
 
-	# Make pacman and yay colorful and adds eye candy on the progress bar because why not.
-	grep "^Color" /etc/pacman.conf >/dev/null || sed -i "s/^#Color$/Color/" /etc/pacman.conf
-	grep "ILoveCandy" /etc/pacman.conf >/dev/null || sed -i "/#VerbosePkgLists/a ILoveCandy" /etc/pacman.conf
+# Make pacman and yay colorful and adds eye candy on the progress bar because why not.
+grep "^Color" /etc/pacman.conf >/dev/null || sed -i "s/^#Color$/Color/" /etc/pacman.conf
+grep "ILoveCandy" /etc/pacman.conf >/dev/null || sed -i "/#VerbosePkgLists/a ILoveCandy" /etc/pacman.conf
 
-	# Use all cores for compilation.
-	sed -i "s/-j2/-j$(nproc)/;s/^#MAKEFLAGS/MAKEFLAGS/" /etc/makepkg.conf
+# Use all cores for compilation.
+sed -i "s/-j2/-j$(nproc)/;s/^#MAKEFLAGS/MAKEFLAGS/" /etc/makepkg.conf
 
-	manualinstall $aurhelper || error "Failed to install AUR helper."
-	}
+manualinstall $aurhelper || error "Failed to install AUR helper."
 
 # The command that does all the installing. Reads the progs.csv file and
 # installs each needed program the way required. Be sure to run this only after
@@ -245,15 +243,12 @@ echo "export ZDOTDIR=/home/$name/.config/zsh" > /etc/zsh/zshenv
 # dbus UUID must be generated for Artix runit.
 dbus-uuidgen > /var/lib/dbus/machine-id
 
-# Block Brave autoupdates just in case. (I don't know if these even exist on Linux, but whatever.)
-grep -q "laptop-updates.brave.com" /etc/hosts || echo "0.0.0.0 laptop-updates.brave.com" >> /etc/hosts
-
 # Start/restart PulseAudio.
 killall pulseaudio; sudo -u "$name" pulseaudio --start
 
 # This line, overwriting the `newperms` command above will allow the user to run
 # serveral important commands, `shutdown`, `reboot`, updating, etc. without a password.
-[ "$distro" = arch ] && newperms "%wheel ALL=(ALL) ALL #LARBS
+newperms "%wheel ALL=(ALL) ALL #LARBS
 %wheel ALL=(ALL) NOPASSWD: /usr/bin/shutdown,/usr/bin/reboot,/usr/bin/systemctl suspend,/usr/bin/wifi-menu,/usr/bin/mount,/usr/bin/umount,/usr/bin/pacman -Syu,/usr/bin/pacman -Syyu,/usr/bin/packer -Syu,/usr/bin/packer -Syyu,/usr/bin/systemctl restart NetworkManager,/usr/bin/rc-service NetworkManager restart,/usr/bin/pacman -Syyu --noconfirm,/usr/bin/loadkeys,/usr/bin/yay,/usr/bin/pacman -Syyuw --noconfirm,/usr/bin/killall"
 
 # Last message! Install complete!
