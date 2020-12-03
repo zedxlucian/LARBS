@@ -145,7 +145,7 @@ stowinstall() {
 	[ -z "$2" ] && branch="master" || branch="$repobranch"
 	dir=$(echo "$dotfilesrepo" | cut -d. -f2 | sed "s/.*\//\/home\/$name\//")
 	sudo -u "$name" git clone --recursive -b "$branch" --depth 1 "$1" "$dir" >/dev/null 2>&1
-	sudo -u "$name" mkdir -p "/home/$name"/{.config,.local/{src,bin/{statusbar,newsboat},share/xorg}} >/dev/null 2>&1
+	sudo -u "$name" mkdir -p "/home/$name"/{.config,.local/{src,bin/{statusbar,newsboat},share/{xorg,gnupg}}} >/dev/null 2>&1
 	cd "$dir" >/dev/null 2>&1 || exit
 	sudo -u "$name" stow -t "/home/$name/" config home local >/dev/null 2>&1 || exit
 	chown -R "$name":wheel "$dir" >/dev/null 2>&1 ;}
@@ -223,6 +223,9 @@ sed -i "s/-j2/-j$(nproc)/;s/^#MAKEFLAGS/MAKEFLAGS/" /etc/makepkg.conf
 
 manualinstall $aurhelper || error "Failed to install AUR helper."
 
+# Adding spotify gpg key to the system as it won't work otherwise // WAITING FOR UPSTREAM FIX
+curl -sS https://download.spotify.com/debian/pubkey_0D811D58.gpg | gpg --import -
+
 # The command that does all the installing. Reads the progs.csv file and
 # installs each needed program the way required. Be sure to run this only after
 # the user has been created and has priviledges to run sudo without a password
@@ -239,6 +242,12 @@ systembeepoff
 chsh -s /bin/zsh "$name" >/dev/null 2>&1
 sudo -u "$name" mkdir -p "/home/$name/.cache/zsh/"
 echo "export ZDOTDIR=/home/$name/.config/zsh" > /etc/zsh/zshenv
+
+# Use french layout globally and also use terminus-font for TTY.
+printf "KEYMAP=fr\nFONT=ter-132n\n" > /etc/vconsole.conf
+
+# Fix to allow running Teamviewer
+sed -i 's/systemd.so/&       type=x11/' /etc/pam.d/system-login
 
 # dbus UUID must be generated for Artix runit.
 dbus-uuidgen > /var/lib/dbus/machine-id
