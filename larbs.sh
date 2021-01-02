@@ -150,16 +150,6 @@ stowinstall() {
 	sudo -u "$name" stow -t "/home/$name/" config home local >/dev/null 2>&1 || exit
 	chown -R "$name":wheel "$dir" >/dev/null 2>&1 ;}
 
-sucklessinstall(){
-	progname="$(basename "$1" .git)"
-	dir="$repodir/$progname"
-	dialog --title "LARBS Installation" --infobox "Installing suckless's \`$progname\` ($n of $total) via \`git\` and \`make\`. $(basename "$1") $2" 5 70
-	sudo -u "$name" git clone "$1" "$dir" >/dev/null 2>&1 || { cd "$dir" || return ; sudo -u "$name" git pull --force origin master;}
-	cd "$dir" || exit
-	make >/dev/null 2>&1
-	make install >/dev/null 2>&1
-	cd /tmp || return ;}
-
 systembeepoff() { dialog --infobox "Getting rid of that retarded error beep sound..." 10 50
 	rmmod pcspkr
 	echo "blacklist pcspkr" > /etc/modprobe.d/nobeep.conf ;}
